@@ -1,14 +1,20 @@
 package com.example.facedetector;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.example.facedetector.Adapter.FaceDetectionAdapter;
 import com.example.facedetector.model.FaceDetectionModel;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.otaliastudios.cameraview.CameraView;
@@ -47,7 +53,17 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
         faceDetectionCameraView.setLifecycleOwner(MainActivity.this);
         faceDetectionCameraView.addFrameProcessor(MainActivity.this);
 
+        bottomSheetBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+            }
+        });
+        bottomSheetRecyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+        bottomSheetRecyclerView.setAdapter(new FaceDetectionAdapter(faceDetectionModels,MainActivity.this));
+
     }
+
+    
 
     @Override
     public void process(@NonNull Frame frame) {

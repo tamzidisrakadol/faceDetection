@@ -31,7 +31,6 @@ android {
 dependencies {
     implementation 'com.intuit.sdp:sdp-android:1.1.0'
     implementation 'com.otaliastudios:cameraview:2.7.2'
-    implementation 'com.vanniktech:android-image-cropper:4.5.0'
     implementation 'com.google.firebase:firebase-ml-vision:24.0.3'
     implementation 'com.google.firebase:firebase-ml-vision-face-model:20.0.1'
     implementation 'androidx.appcompat:appcompat:1.5.1'
