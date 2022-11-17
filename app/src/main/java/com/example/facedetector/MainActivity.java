@@ -11,6 +11,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -22,8 +26,13 @@ import android.widget.Toast;
 
 import com.example.facedetector.Adapter.FaceDetectionAdapter;
 import com.example.facedetector.model.FaceDetectionModel;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.face.FirebaseVisionFace;
+import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 import com.otaliastudios.cameraview.CameraView;
 import com.otaliastudios.cameraview.controls.Facing;
@@ -33,6 +42,7 @@ import com.yalantis.ucrop.UCrop;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity implements FrameProcessor {
@@ -107,11 +117,66 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
         Objects.requireNonNull(bottomSheetRecyclerView.getAdapter()).notifyDataSetChanged();
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
         FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
+
+
         FirebaseVisionFaceDetectorOptions faceDetectorOptions = new FirebaseVisionFaceDetectorOptions.Builder()
                 .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
                 .setLandmarkMode(FirebaseVisionFaceDetectorOptions.ALL_LANDMARKS)
                 .setClassificationMode(FirebaseVisionFaceDetectorOptions.ALL_CLASSIFICATIONS)
                 .build();
+
+        FirebaseVisionFaceDetector firebaseVisionFaceDetector = FirebaseVision.getInstance().getVisionFaceDetector(faceDetectorOptions);
+
+        firebaseVisionFaceDetector.detectInImage(firebaseVisionImage)
+                .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionFace>>() {
+                    @Override
+                    public void onSuccess(@NonNull List<FirebaseVisionFace> firebaseVisionFaces) {
+                        Bitmap mutableImg = bitmap.copy(Bitmap.Config.ARGB_8888,true);
+                        detectFaces(firebaseVisionFaces,mutableImg);
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+
+                    }
+                });
+
+    }
+
+    private void detectFaces(List<FirebaseVisionFace> firebaseVisionFaces, Bitmap mutableImg) {
+        if(firebaseVisionFaces==null || mutableImg==null){
+            Toast.makeText(this, "There was an error", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Canvas canvas = new Canvas(mutableImg);
+        Paint facePaint = new Paint();
+        facePaint.setColor(Color.GREEN);
+        facePaint.setStyle(Paint.Style.STROKE);
+        facePaint.setStrokeWidth(5f);
+
+        Paint faceTextPaint = new Paint();
+        faceTextPaint.setColor(Color.BLUE);
+        faceTextPaint.setTextSize(30f);
+        faceTextPaint.setTypeface(Typeface.SANS_SERIF);
+
+        Paint landmarkPaint = new Paint();
+        landmarkPaint.setColor(Color.RED);
+        landmarkPaint.setStyle(Paint.Style.FILL);
+        landmarkPaint.setStrokeWidth(8f);
+
+        for(int i=0; i<firebaseVisionFaces.size();i++){
+            canvas.drawRect(firebaseVisionFaces.get(i).getBoundingBox(),facePaint);
+            canvas.drawText("Face " + i, (firebaseVisionFaces.get(i).getBoundingBox().centerX()
+                            - (firebaseVisionFaces.get(i).getBoundingBox().width() >> 2) + 8f), // added >> to avoid errors when dividing with "/"
+                    (firebaseVisionFaces.get(i).getBoundingBox().centerY()
+                            + firebaseVisionFaces.get(i).getBoundingBox().height() >> 2) - 8F,
+                    facePaint);
+
+        }
+
+
     }
 
     @Override
