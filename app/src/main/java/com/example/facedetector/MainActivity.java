@@ -31,9 +31,11 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
+import com.google.firebase.ml.vision.face.FirebaseVisionFaceLandmark;
 import com.otaliastudios.cameraview.CameraView;
 import com.otaliastudios.cameraview.controls.Facing;
 import com.otaliastudios.cameraview.frame.Frame;
@@ -47,7 +49,7 @@ import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity implements FrameProcessor {
     private Facing camerFacing = Facing.FRONT;
-    private ImageView imgView, imgView2;
+    private ImageView imgView;
     private CameraView faceDetectionCameraView;
     private RecyclerView bottomSheetRecyclerView;
     private BottomSheetBehavior bottomSheetBehavior;
@@ -65,7 +67,6 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
         faceDetectionModels = new ArrayList<>();
         bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet));
         imgView = findViewById(R.id.face_detection_image_view);
-        imgView2 = findViewById(R.id.face_detection_camera_image_view);
         faceDetectionCameraView = findViewById(R.id.face_detection_camera_view);
         toggleBtn = findViewById(R.id.face_detection_camera_toggle_button);
         bottomSheetBtn = findViewById(R.id.bottom_sheet_button);
@@ -174,13 +175,95 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                             + firebaseVisionFaces.get(i).getBoundingBox().height() >> 2) - 8F,
                     facePaint);
 
-        }
 
+            FirebaseVisionFace face = firebaseVisionFaces.get(i);
+
+            //left eye
+            if (face.getLandmark(FirebaseVisionFaceLandmark.LEFT_EYE) != null) {
+                FirebaseVisionFaceLandmark leftEye = face.getLandmark(FirebaseVisionFaceLandmark.LEFT_EYE);
+                canvas.drawCircle(Objects.requireNonNull(leftEye).getPosition().getX(),
+                        leftEye.getPosition().getY(),
+                        8f,
+                        landmarkPaint
+                );
+            }
+
+            //right eye
+            if (face.getLandmark(FirebaseVisionFaceLandmark.RIGHT_EYE) != null) {
+                FirebaseVisionFaceLandmark rightEye = face.getLandmark(FirebaseVisionFaceLandmark.RIGHT_EYE);
+                canvas.drawCircle(Objects.requireNonNull(rightEye).getPosition().getX(),
+                        rightEye.getPosition().getY(),
+                        8f,
+                        landmarkPaint
+                );
+            }
+
+            //nose
+            if (face.getLandmark(FirebaseVisionFaceLandmark.NOSE_BASE) != null) {
+                FirebaseVisionFaceLandmark nose = face.getLandmark(FirebaseVisionFaceLandmark.NOSE_BASE);
+                canvas.drawCircle(Objects.requireNonNull(nose).getPosition().getX(),
+                        nose.getPosition().getY(),
+                        8f,
+                        landmarkPaint
+                );
+            }
+            //left ear
+            if (face.getLandmark(FirebaseVisionFaceLandmark.LEFT_EAR) != null) {
+                FirebaseVisionFaceLandmark leftEar = face.getLandmark(FirebaseVisionFaceLandmark.LEFT_EAR);
+                canvas.drawCircle(Objects.requireNonNull(leftEar).getPosition().getX(),
+                        leftEar.getPosition().getY(),
+                        8f,
+                        landmarkPaint
+                );
+            }
+
+            //right ear
+            if (face.getLandmark(FirebaseVisionFaceLandmark.RIGHT_EAR) != null) {
+                FirebaseVisionFaceLandmark rightEar = face.getLandmark(FirebaseVisionFaceLandmark.RIGHT_EAR);
+                canvas.drawCircle(Objects.requireNonNull(rightEar).getPosition().getX(),
+                        rightEar.getPosition().getY(),
+                        8f,
+                        landmarkPaint
+                );
+            }
+
+            //mouth
+            if (face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_LEFT) != null
+                    && face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_BOTTOM) != null
+                    && face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_RIGHT) != null) {
+                FirebaseVisionFaceLandmark leftMouth = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_LEFT);
+                FirebaseVisionFaceLandmark bottomMouth = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_BOTTOM);
+                FirebaseVisionFaceLandmark rightMouth = face.getLandmark(FirebaseVisionFaceLandmark.MOUTH_RIGHT);
+                canvas.drawLine(leftMouth.getPosition().getX(),
+                        leftMouth.getPosition().getY(),
+                        bottomMouth.getPosition().getX(),
+                        bottomMouth.getPosition().getY(),
+                        landmarkPaint);
+                canvas.drawLine(bottomMouth.getPosition().getX(),
+                        bottomMouth.getPosition().getY(),
+                        rightMouth.getPosition().getX(),
+                        rightMouth.getPosition().getY(), landmarkPaint);
+            }
+
+            faceDetectionModels.add(new FaceDetectionModel(i, "Smiling Probability " + face.getSmilingProbability()));
+            faceDetectionModels.add(new FaceDetectionModel(i, "Left Eye Open Probability " + face.getLeftEyeOpenProbability()));
+            faceDetectionModels.add(new FaceDetectionModel(i, "Right Eye Open Probability " + face.getRightEyeOpenProbability()));
+        }
 
     }
 
     @Override
     public void process(@NonNull Frame frame) {
+        int width = frame.getSize().getWidth();
+        int height = frame.getSize().getHeight();
+
+        FirebaseVisionImageMetadata imageMetadata = new FirebaseVisionImageMetadata
+                .Builder()
+                .setWidth(width)
+                .setHeight(height)
+                .setFormat(FirebaseVisionImageMetadata.IMAGE_FORMAT_NV21)
+                .setRotation((camerFacing==Facing.FRONT)?FirebaseVisionImageMetadata.ROTATION_270:FirebaseVisionImageMetadata.ROTATION_90)
+                .build();
 
     }
 }
