@@ -29,6 +29,7 @@ import com.example.facedetector.model.FaceDetectionModel;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
@@ -63,7 +64,6 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getSupportActionBar().hide();
-
         faceDetectionModels = new ArrayList<>();
         bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.bottom_sheet));
         imgView = findViewById(R.id.face_detection_image_view);
@@ -264,6 +264,28 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                 .setFormat(FirebaseVisionImageMetadata.IMAGE_FORMAT_NV21)
                 .setRotation((camerFacing==Facing.FRONT)?FirebaseVisionImageMetadata.ROTATION_270:FirebaseVisionImageMetadata.ROTATION_90)
                 .build();
+
+        FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromByteArray(frame.getData(),imageMetadata);
+        FirebaseVisionFaceDetectorOptions options = new FirebaseVisionFaceDetectorOptions
+                .Builder()
+                .setContourMode(FirebaseVisionFaceDetectorOptions.ALL_CONTOURS)
+                .build();
+
+        FirebaseVisionFaceDetector faceDetector = FirebaseVision.getInstance()
+                .getVisionFaceDetector(options);
+        faceDetector.detectInImage(firebaseVisionImage)
+                .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionFace>>() {
+                    @Override
+                    public void onSuccess(@NonNull List<FirebaseVisionFace> firebaseVisionFaces) {
+                        imgView.setImageBitmap(null);
+                        Bitmap bitmap = Bitmap.createBitmap(height,width, Bitmap.Config.ARGB_8888);
+                    }
+                }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+
+                    }
+                });
 
     }
 }
