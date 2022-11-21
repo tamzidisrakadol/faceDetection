@@ -13,6 +13,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -84,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                 mGetContent.launch("image/*");
             }
         });
+
         mGetContent = registerForActivityResult(new ActivityResultContracts.GetContent(), new ActivityResultCallback<Uri>() {
             @Override
             public void onActivityResult(Uri result) {
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
         imgView.setImageURI(uri);
         faceDetectionModels.clear();
         Objects.requireNonNull(bottomSheetRecyclerView.getAdapter()).notifyDataSetChanged();
-        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HALF_EXPANDED);
         FirebaseVisionImage firebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap);
 
 
@@ -136,6 +138,12 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                     public void onSuccess(@NonNull List<FirebaseVisionFace> firebaseVisionFaces) {
                         Bitmap mutableImg = bitmap.copy(Bitmap.Config.ARGB_8888,true);
                         detectFaces(firebaseVisionFaces,mutableImg);
+
+                        imgView.setImageBitmap(mutableImg);
+
+                        bottomSheetRecyclerView.getAdapter().notifyDataSetChanged();
+                        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
@@ -273,14 +281,15 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                 .setContourMode(FirebaseVisionFaceDetectorOptions.ALL_CONTOURS)
                 .build();
 
-        FirebaseVisionFaceDetector faceDetector = FirebaseVision.getInstance()
-                .getVisionFaceDetector(options);
+        FirebaseVisionFaceDetector faceDetector = FirebaseVision.getInstance().getVisionFaceDetector(options);
+
         faceDetector.detectInImage(firebaseVisionImage)
                 .addOnSuccessListener(new OnSuccessListener<List<FirebaseVisionFace>>() {
                     @Override
-                    public void onSuccess(@NonNull List<FirebaseVisionFace> firebaseVisionFaces) {
+                    public void onSuccess(List<FirebaseVisionFace> firebaseVisionFaces) {
                         imgView.setImageBitmap(null);
-                        Bitmap bitmap = Bitmap.createBitmap(height,width, Bitmap.Config.ARGB_8888);
+
+                        Bitmap bitmap = Bitmap.createBitmap(height, width, Bitmap.Config.ARGB_8888);
                         Canvas canvas = new Canvas(bitmap);
                         Paint dotPaint = new Paint();
                         dotPaint.setColor(Color.RED);
@@ -292,37 +301,182 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                         linePaint.setStyle(Paint.Style.STROKE);
                         linePaint.setStrokeWidth(2f);
 
-                        for(FirebaseVisionFace face : firebaseVisionFaces){
-                            List<FirebaseVisionPoint> faceCounter = face.getContour(
+                        for (FirebaseVisionFace face : firebaseVisionFaces) {
+                            List<FirebaseVisionPoint> faceContours = face.getContour(
                                     FirebaseVisionFaceContour.FACE
                             ).getPoints();
+                            for (int i = 0; i < faceContours.size(); i++) {
+                                FirebaseVisionPoint faceContour = null;
+                                if (i != (faceContours.size() - 1)) {
+                                    faceContour = faceContours.get(i);
+                                    canvas.drawLine(faceContour.getX(),
+                                            faceContour.getY(),
+                                            faceContours.get(i + 1).getX(),
+                                            faceContours.get(i + 1).getY(),
+                                            linePaint
 
-                            //inner loop
-                            for (int i=0;i<faceCounter.size();i++){
-                                FirebaseVisionPoint point = null;
-                                if (i!=(faceCounter.size()-1)){
-                                    point = faceCounter.get(i);
-                                    canvas.drawLine(point.getX(),
-                                            point.getY(),
-                                            faceCounter.get(i+1).getX(), faceCounter.get(i+1).getY(),
-                                            linePaint);
-                                }else{
-                                    canvas.drawLine(point.getX(),
-                                            point.getY(),
-                                            faceCounter.get(0).getX(),
-                                            faceCounter.get(0).getY(),
+                                    );
+
+                                } else {
+                                    canvas.drawLine(faceContour.getX(),
+                                            faceContour.getY(),
+                                            faceContours.get(0).getX(),
+                                            faceContours.get(0).getY(),
                                             linePaint);
                                 }
-                                    canvas.drawCircle(point.getX(),point.getY(),4f,dotPaint);
+                                canvas.drawCircle(faceContour.getX(),
+                                        faceContour.getY(),
+                                        4f,
+                                        dotPaint );
                             }
-                        }
+
+                            List<FirebaseVisionPoint> leftEyebrowTopCountours = face.getContour(
+                                    FirebaseVisionFaceContour.LEFT_EYEBROW_TOP).getPoints();
+                            for (int i = 0; i < leftEyebrowTopCountours.size(); i++) {
+                                FirebaseVisionPoint contour = leftEyebrowTopCountours.get(i);
+                                if (i != (leftEyebrowTopCountours.size() - 1))
+                                    canvas.drawLine(contour.getX(), contour.getY(), leftEyebrowTopCountours.get(i + 1).getX(),leftEyebrowTopCountours.get(i + 1).getY(), linePaint);
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+
+                            List<FirebaseVisionPoint> rightEyebrowTopCountours = face.getContour(
+                                    FirebaseVisionFaceContour. RIGHT_EYEBROW_TOP).getPoints();
+                            for (int i = 0; i < rightEyebrowTopCountours.size(); i++) {
+                                FirebaseVisionPoint contour = rightEyebrowTopCountours.get(i);
+                                if (i != (rightEyebrowTopCountours.size() - 1))
+                                    canvas.drawLine(contour.getX(), contour.getY(), rightEyebrowTopCountours.get(i + 1).getX(),rightEyebrowTopCountours.get(i + 1).getY(), linePaint);
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+
+                            List<FirebaseVisionPoint> rightEyebrowBottomCountours = face.getContour(
+                                    FirebaseVisionFaceContour. RIGHT_EYEBROW_BOTTOM).getPoints();
+                            for (int i = 0; i < rightEyebrowBottomCountours.size(); i++) {
+                                FirebaseVisionPoint contour = rightEyebrowBottomCountours.get(i);
+                                if (i != (rightEyebrowBottomCountours.size() - 1))
+                                    canvas.drawLine(contour.getX(), contour.getY(), rightEyebrowBottomCountours.get(i + 1).getX(),rightEyebrowBottomCountours.get(i + 1).getY(), linePaint);
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+
+                            List<FirebaseVisionPoint> leftEyeContours = face.getContour(
+                                    FirebaseVisionFaceContour.LEFT_EYE).getPoints();
+                            for (int i = 0; i < leftEyeContours.size(); i++) {
+                                FirebaseVisionPoint contour = leftEyeContours.get(i);
+                                if (i != (leftEyeContours.size() - 1)){
+                                    canvas.drawLine(contour.getX(), contour.getY(), leftEyeContours.get(i + 1).getX(),leftEyeContours.get(i + 1).getY(), linePaint);
+
+                                }else {
+                                    canvas.drawLine(contour.getX(), contour.getY(), leftEyeContours.get(0).getX(),
+                                            leftEyeContours.get(0).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+
+                            }
+
+                            List<FirebaseVisionPoint> rightEyeContours = face.getContour(
+                                    FirebaseVisionFaceContour.RIGHT_EYE).getPoints();
+                            for (int i = 0; i < rightEyeContours.size(); i++) {
+                                FirebaseVisionPoint contour = rightEyeContours.get(i);
+                                if (i != (rightEyeContours.size() - 1)){
+                                    canvas.drawLine(contour.getX(), contour.getY(), rightEyeContours.get(i + 1).getX(),rightEyeContours.get(i + 1).getY(), linePaint);
+
+                                }else {
+                                    canvas.drawLine(contour.getX(), contour.getY(), rightEyeContours.get(0).getX(),
+                                            rightEyeContours.get(0).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+
+                            }
+
+                            List<FirebaseVisionPoint> upperLipTopContour = face.getContour(
+                                    FirebaseVisionFaceContour.UPPER_LIP_TOP).getPoints();
+                            for (int i = 0; i < upperLipTopContour.size(); i++) {
+                                FirebaseVisionPoint contour = upperLipTopContour.get(i);
+                                if (i != (upperLipTopContour.size() - 1)){
+                                    canvas.drawLine(contour.getX(), contour.getY(),
+                                            upperLipTopContour.get(i + 1).getX(),
+                                            upperLipTopContour.get(i + 1).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+
+                            List<FirebaseVisionPoint> upperLipBottomContour = face.getContour(
+                                    FirebaseVisionFaceContour.UPPER_LIP_BOTTOM).getPoints();
+                            for (int i = 0; i < upperLipBottomContour.size(); i++) {
+                                FirebaseVisionPoint contour = upperLipBottomContour.get(i);
+                                if (i != (upperLipBottomContour.size() - 1)){
+                                    canvas.drawLine(contour.getX(), contour.getY(), upperLipBottomContour.get(i + 1).getX(),upperLipBottomContour.get(i + 1).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+                            List<FirebaseVisionPoint> lowerLipTopContour = face.getContour(
+                                    FirebaseVisionFaceContour.LOWER_LIP_TOP).getPoints();
+                            for (int i = 0; i < lowerLipTopContour.size(); i++) {
+                                FirebaseVisionPoint contour = lowerLipTopContour.get(i);
+                                if (i != (lowerLipTopContour.size() - 1)){
+                                    canvas.drawLine(contour.getX(), contour.getY(), lowerLipTopContour.get(i + 1).getX(),lowerLipTopContour.get(i + 1).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+                            List<FirebaseVisionPoint> lowerLipBottomContour = face.getContour(
+                                    FirebaseVisionFaceContour.LOWER_LIP_BOTTOM).getPoints();
+                            for (int i = 0; i < lowerLipBottomContour.size(); i++) {
+                                FirebaseVisionPoint contour = lowerLipBottomContour.get(i);
+                                if (i != (lowerLipBottomContour.size() - 1)){
+                                    canvas.drawLine(contour.getX(), contour.getY(), lowerLipBottomContour.get(i + 1).getX(),lowerLipBottomContour.get(i + 1).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+
+                            List<FirebaseVisionPoint> noseBridgeContours = face.getContour(
+                                    FirebaseVisionFaceContour.NOSE_BRIDGE).getPoints();
+                            for (int i = 0; i < noseBridgeContours.size(); i++) {
+                                FirebaseVisionPoint contour = noseBridgeContours.get(i);
+                                if (i != (noseBridgeContours.size() - 1)) {
+                                    canvas.drawLine(contour.getX(), contour.getY(), noseBridgeContours.get(i + 1).getX(),noseBridgeContours.get(i + 1).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+
+                            List<FirebaseVisionPoint> noseBottomContours = face.getContour(
+                                    FirebaseVisionFaceContour.NOSE_BOTTOM).getPoints();
+                            for (int i = 0; i < noseBottomContours.size(); i++) {
+                                FirebaseVisionPoint contour = noseBottomContours.get(i);
+                                if (i != (noseBottomContours.size() - 1)) {
+                                    canvas.drawLine(contour.getX(), contour.getY(), noseBottomContours.get(i + 1).getX(),noseBottomContours.get(i + 1).getY(), linePaint);
+                                }
+                                canvas.drawCircle(contour.getX(), contour.getY(), 4f, dotPaint);
+
+                            }
+                            if (camerFacing == Facing.FRONT) {
+                                //Flip image!
+                                Matrix matrix = new Matrix();
+                                matrix.preScale(-1f, 1f);
+                                Bitmap flippedBitmap = Bitmap.createBitmap(bitmap, 0, 0,
+                                        bitmap.getWidth(), bitmap.getHeight(),
+                                        matrix, true);
+                                imgView.setImageBitmap(flippedBitmap);
+                            }else
+                                imgView.setImageBitmap(bitmap);
+                        }//end forloop
+
+
                     }
                 }).addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
+                        imgView.setImageBitmap(null);
 
                     }
                 });
-
     }
 }
