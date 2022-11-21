@@ -33,7 +33,9 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.ml.vision.FirebaseVision;
 import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
+import com.google.firebase.ml.vision.common.FirebaseVisionPoint;
 import com.google.firebase.ml.vision.face.FirebaseVisionFace;
+import com.google.firebase.ml.vision.face.FirebaseVisionFaceContour;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceLandmark;
@@ -279,6 +281,41 @@ public class MainActivity extends AppCompatActivity implements FrameProcessor {
                     public void onSuccess(@NonNull List<FirebaseVisionFace> firebaseVisionFaces) {
                         imgView.setImageBitmap(null);
                         Bitmap bitmap = Bitmap.createBitmap(height,width, Bitmap.Config.ARGB_8888);
+                        Canvas canvas = new Canvas(bitmap);
+                        Paint dotPaint = new Paint();
+                        dotPaint.setColor(Color.RED);
+                        dotPaint.setStyle(Paint.Style.FILL);
+                        dotPaint.setStrokeWidth(3f);
+
+                        Paint linePaint = new Paint();
+                        linePaint.setColor(Color.GREEN);
+                        linePaint.setStyle(Paint.Style.STROKE);
+                        linePaint.setStrokeWidth(2f);
+
+                        for(FirebaseVisionFace face : firebaseVisionFaces){
+                            List<FirebaseVisionPoint> faceCounter = face.getContour(
+                                    FirebaseVisionFaceContour.FACE
+                            ).getPoints();
+
+                            //inner loop
+                            for (int i=0;i<faceCounter.size();i++){
+                                FirebaseVisionPoint point = null;
+                                if (i!=(faceCounter.size()-1)){
+                                    point = faceCounter.get(i);
+                                    canvas.drawLine(point.getX(),
+                                            point.getY(),
+                                            faceCounter.get(i+1).getX(), faceCounter.get(i+1).getY(),
+                                            linePaint);
+                                }else{
+                                    canvas.drawLine(point.getX(),
+                                            point.getY(),
+                                            faceCounter.get(0).getX(),
+                                            faceCounter.get(0).getY(),
+                                            linePaint);
+                                }
+                                    canvas.drawCircle(point.getX(),point.getY(),4f,dotPaint);
+                            }
+                        }
                     }
                 }).addOnFailureListener(new OnFailureListener() {
                     @Override
